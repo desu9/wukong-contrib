@@ -175,16 +175,13 @@ class NeteaseMusicPlayer(MusicPlayer):
         return config.get('/' + self.plugin.SLUG + '/md5pass')
 
     def login(self):
-        resp = self.api.login(self.account, self.md5pass)
-        if resp["code"] == 200:
-            userid = resp["account"]["id"]
-            nickname = resp["profile"]["nickname"]
-            self.storage.user_info(userid, nickname)
-            self.plugin.say('首次登陆成功，恭喜恭喜!', cache=True)
-            return True
-        else:
-            self.plugin.say('登陆失败，请检查账号和密码是否正确。', cache=True, wait=True)
-            logger.error('状态码:{}'.format(resp['code']))
+        self.api.login_by_qr()
+        resp = api.login_status()
+        userid = resp["account"]["id"]
+        nickname = resp["profile"]["nickname"]
+        self.storage.user_info(userid, nickname)
+        self.plugin.say('首次登陆成功，恭喜恭喜!', cache=True)
+        return True
 
     def daily_checkin(self):
         res = self.api.daily_task(is_mobile=False)
