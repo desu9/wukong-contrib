@@ -446,29 +446,93 @@ class NetEase(object):
             log.error("Error: {}, Path: {}, response: {}".format(e, path, resp.text[:200]))
         finally:
             return data
+    #cellphone can't login
+    # def login(self, username, password):
+    #     self.session.cookies.load()
+    #     if username.isdigit():
+    #         path = "/weapi/login/cellphone"
+    #         params = dict(phone=username, password=password, rememberLogin="true")
+    #     else:
+    #         # magic token for login
+    #         # see https://github.com/Binaryify/NeteaseCloudMusicApi/blob/master/router/login.js#L15
+    #         client_token = (
+    #             "1_jVUMqWEPke0/1/Vu56xCmJpo5vP1grjn_SOVVDzOc78w8OKLVZ2JH7IfkjSXqgfmh"
+    #         )
+    #         path = "/weapi/login"
+    #         params = dict(
+    #             username=username,
+    #             password=password,
+    #             rememberLogin="true",
+    #             clientToken=client_token,
+    #         )
+    #     data = self.request("POST", path, params)
+    #     self.session.cookies.save()
+    #     return data
 
-    def login(self, username, password):
+     # 导入 qrcode 模块，用于生成二维码图片数据
+
+    # 定义一个方法，用于获取二维码的 key
+    def get_qr_key(self):
         self.session.cookies.load()
-        if username.isdigit():
-            path = "/weapi/login/cellphone"
-            params = dict(phone=username, password=password, rememberLogin="true")
-        else:
-            # magic token for login
-            # see https://github.com/Binaryify/NeteaseCloudMusicApi/blob/master/router/login.js#L15
-            client_token = (
-                "1_jVUMqWEPke0/1/Vu56xCmJpo5vP1grjn_SOVVDzOc78w8OKLVZ2JH7IfkjSXqgfmh"
-            )
-            path = "/weapi/login"
-            params = dict(
-                username=username,
-                password=password,
-                rememberLogin="true",
-                clientToken=client_token,
-            )
+        path = "/weapi/login/qrcode/unikey"
+        params = dict(type=1)
         data = self.request("POST", path, params)
         self.session.cookies.save()
         return data
 
+    # 定义一个方法，用于获取二维码的网址和图片数据
+    def get_qr_code(self, key, qrimg=True):
+        url = f"https://music.163.com/login?codekey={key}"
+        if qrimg:
+            # 使用 qrcode 模块生成二维码图片数据
+            img = qrcode.make(url)
+            # 显示图片
+            # 方法一：使用 PIL 模块的 show 方法
+            img.show()
+            # 方法二：使用 matplotlib 模块的 imshow 方法
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img)
+            # plt.show()
+        else:
+            img = None
+        return dict(qrurl=url, qrimg=img)
+
+    # 检查二维码的状态
+    def check_qr_status(self, key):
+        path = "/weapi/login/qrcode/client/login"
+        params = dict(key=key, type=1)
+        data = self.request("POST", path, params)
+        return data
+
+    # 使用二维码登录
+    def login_by_qr(self):
+        # 获取二维码的 key
+        data = self.get_qr_key()
+        key = data["unikey"]
+        code = self.get_qr_code(key)
+        while True:
+            data = self.check_qr_status(key)
+            code = data["code"]
+            if code == 801:
+                print(data['message'])
+                time.sleep(1)
+            elif code == 802:
+                print(data['message'])
+                time.sleep(1)
+            elif code == 803:
+                print(data['message'])
+                self.session.cookies.save()
+                return data
+            else:
+                log.error(e)
+                break
+                
+    #获取用户信息
+    def login_status(self):
+        path = "/weapi/w/nuser/account/get"
+        data = self.request("POST", path)
+        return data
+    
     # 每日签到
     def daily_task(self, is_mobile=True):
         path = "/weapi/point/dailyTask"
